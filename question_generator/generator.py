@@ -6,6 +6,7 @@
 import sqlite3 as lite
 import sys,csv
 import operator
+import re
 
 con = None
 
@@ -18,7 +19,8 @@ class Question:
         self.rewards = rewards
 
     def console_print(self):
-        answer = raw_input(self.text)
+        answer = 'toto' # raw_input(self.text)
+        print self.text
 
         if answer == self.answer:
             print 'Well done! It was ' + self.answer
@@ -59,36 +61,21 @@ class database:
         for row in cur:
             print row[0]
 
-    # Which is the biggest country between...
-    def create_country_size_question(self):
+    def display_tables(self):
         con = self.con
         cur = con.cursor()    
-        cur.execute('SELECT * FROM country ORDER BY RANDOM() LIMIT 5;')
-
-        countries = {}
+        cur.execute('SELECT name FROM sqlite_master WHERE type="table" ORDER BY name;')
+            
         for row in cur:
-            try:
-                countries[row[0]] = float(row[1])
-            except ValueError:
-                countries[row[0]] = 0
+            print row[0]
 
-        question = ''
-
-        question += 'Between\n'
-
-        for country in countries:
-            question += ' - ' + country + '\n'
-
-        question += 'which is the largest one?\n'
-
-        answer = raw_input(question)
-        biggestCountry = max(countries.iteritems(), key=operator.itemgetter(1))[0]
-
-        if answer == biggestCountry:
-            print 'Well done! It was ' + biggestCountry
-        else:
-            print 'Wrong... The right answer is ' + biggestCountry
-
+    def display_table_fields(self,table_name):
+        con = self.con
+        cur = con.cursor()    
+        cur.execute('PRAGMA table_info(' + table_name + ');')
+            
+        for row in cur:
+            print row
 
 
     # Which is the biggest country between...
@@ -118,14 +105,44 @@ class database:
         return Question(0,question,biggestCountry,'','')
 
 
+
+    # Which is the biggest country between...
+    def create_country_religion_question(self):
+        con = self.con
+        cur = con.cursor()    
+        cur.execute('SELECT territory,Christian,Muslim,Buddhist,Hindu,Others,Nonreligious FROM country ORDER BY RANDOM() LIMIT 1;')
+
+        religions = ['Christian','Muslim','Buddhist','Hindu','Others','Non Religious']
+
+        for row in cur:
+            question = 'What is the religion of ' + row[0] + '?\n'
+            for i in range(1,7):
+                question += '- ' + religions[i-1] + '\n'
+
+            maxPer = 0
+            maxId = 0
+            for i in range(1,7):
+                parsedLine = re.search("(?P<number>\d+)",row[i])
+                if parsedLine:
+                    if int(parsedLine.group("number")) > maxPer:
+                        maxPer = int(parsedLine.group("number"))
+                        maxId = i
+
+        answer = religions[maxId-1]
+
+        return Question(0,question,answer,'','')
+
+
     def close_connection(self):
         if con:
             con.close()
 
 db = database('countries.db')
 # db.fill_database('countryfactsv2.csv')
-# db.display_tables()
-question = db.create_country_size_question()
+db.display_tables()
+db.display_table_fields('country')
+# question = db.create_country_size_question()
+question = db.create_country_religion_question()
 
 question.console_print()
 
